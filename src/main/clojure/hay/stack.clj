@@ -31,30 +31,25 @@
        n))
 
 (defprotocol ^:private Item
-  (^:private emit      [this])
-  (^:private signature [this]))
+  (^:private emit [this]))
 
 (extend-protocol Item
   Object
-  (emit      [this] #(conj % this))
-  (signature [this] [0 1])
+  (emit [this] #(conj % this))
 
   nil
-  (emit      [this] #(conj % this))
-  (signature [this] [0 1])
+  (emit [this] #(conj % this))
 
   Symbol
-  (emit      [this] (lookup this))
-  (signature [this] (signature (lookup this)))
+  (emit [this] (emit (lookup this)))
 
   Var
   (emit [this]
-    (let [[to-pop to-push] (signature this)]
+    (let [[to-pop to-push] (-> this meta ::signature compile-signature)]
       (fn [stack]
         (let [[args stack] (pop-n stack to-pop)
               result       (apply @this args)]
           (cond
             (zero? to-push) stack
             (= to-push 1)   (conj stack result)
-            :else           (into stack result))))))
-  (signature [this] (-> this meta ::signature compile-signature)))
+            :else           (into stack result)))))))
