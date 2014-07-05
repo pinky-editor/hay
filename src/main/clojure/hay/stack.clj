@@ -5,6 +5,13 @@
     {::namespaces {}
      ::namespace  :haystack.core}))
 
+(defn ^:private lookup
+  [word]
+  (let [world @world]
+    (if-let [w (get-in world [:namespaces (::namespace world) word])]
+      w
+      (throw (ex-info "Unknown word" {:unkown-word word})))))
+
 (defprotocol ^:private Item
   (^:private emit      [this])
   (^:private signature [this]))
