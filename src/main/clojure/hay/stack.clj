@@ -1,6 +1,7 @@
 (ns hay.stack
   (:import
-    clojure.lang.Symbol))
+    clojure.lang.Symbol
+    clojure.lang.Var))
 
 (def world
   (atom
@@ -44,4 +45,16 @@
 
   Symbol
   (emit      [this] (lookup this))
-  (signature [this] (signature (lookup this))))
+  (signature [this] (signature (lookup this)))
+
+  Var
+  (emit [this]
+    (let [[to-pop to-push] (signature this)]
+      (fn [stack]
+        (let [[args stack] (pop-n stack to-pop)
+              result       (apply @this args)]
+          (cond
+            (zero? to-push) stack
+            (= to-push 1)   (conj stack result)
+            :else           (into stack result))))))
+  (signature [this] (-> this meta ::signature compile-signature)))
