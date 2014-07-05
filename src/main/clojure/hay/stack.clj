@@ -22,6 +22,13 @@
               [(inc to-push) _]))
           [0 0] sig))
 
+(defn ^:private pop-n
+  [stack n]
+  (nth (iterate (fn [[popped stack]]
+                     [(conj popped (peek stack)) (pop stack)])
+                [[] stack])
+       n))
+
 (defprotocol ^:private Item
   (^:private emit      [this])
   (^:private signature [this]))
