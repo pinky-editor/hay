@@ -1,4 +1,6 @@
-(ns hay.stack)
+(ns hay.stack
+  (:import
+    clojure.lang.Symbol))
 
 (def world
   (atom
@@ -23,4 +25,8 @@
 
   nil
   (emit      [this] #(conj % this))
-  (signature [this] [0 1]))
+  (signature [this] [0 1])
+
+  Symbol
+  (emit      [this] (lookup this))
+  (signature [this] (signature (lookup this))))
