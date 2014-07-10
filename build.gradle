@@ -40,6 +40,9 @@ repositories {
 
 dependencies {
     compile "org.clojure:clojure:1.6.0"
+    compile("instaparse:instaparse:1.3.2") {
+        exclude group: "org.clojure", module: "clojure"
+    }
 
     development "org.clojure:tools.nrepl:0.2.3"
     development "redl:redl:0.2.2"
