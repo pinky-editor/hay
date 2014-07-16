@@ -62,8 +62,8 @@
   [stack word]
   (word stack))
 
-(defprotocol ^:private Word
-  (^:private emit [this]))
+(defprotocol Word
+  (emit [this]))
 
 (defn emit-value
   [v]
