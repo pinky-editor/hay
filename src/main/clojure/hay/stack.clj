@@ -172,7 +172,4 @@
 
 (defn ^:private pop-n
   [stack n]
-  (nth (iterate (fn [[popped stack]]
-                     [(conj popped (peek stack)) (pop stack)])
-                [[] stack])
-       n))
+  [(subvec stack (- (count stack) n)) (subvec stack 0 (- (count stack) n))])
