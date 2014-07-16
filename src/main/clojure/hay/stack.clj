@@ -4,6 +4,7 @@
     :as clj)
   (:import
     java.util.regex.Pattern
+    clojure.lang.AFunction
     clojure.lang.Symbol
     clojure.lang.Var)
   (:require
@@ -105,6 +106,9 @@
 
   Symbol
   (emit [this] (emit (lookup this)))
+
+  AFunction
+  (emit [this] (emit-fn this))
 
   Var
   (emit [this] (emit-fn this))
