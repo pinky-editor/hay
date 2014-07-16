@@ -109,8 +109,7 @@
   Block
   (emit [{words :words}]
     (let [words (map emit words)]
-      (fn [stack]
-        (reduce #(%2 %1) stack words))))
+      #(reduce eval % words)))
 
   QuotedSymbol
   (emit [{sym :sym}] (emit-value (lookup sym))))
