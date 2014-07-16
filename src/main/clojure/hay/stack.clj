@@ -168,7 +168,7 @@
 (defn ^:private compile-signature
   [sig]
   (let [to-pop (count (signature>args sig))]
-    [to-pop (when-not (= (pop sig) '???) (- (count sig) to-pop 1))]))
+    [to-pop (when-not (= (peek sig) '???) (- (count sig) to-pop 1))]))
 
 (defn ^:private pop-n
   [stack n]
