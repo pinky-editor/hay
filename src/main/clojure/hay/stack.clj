@@ -85,6 +85,17 @@
   [v]
   #(conj % v))
 
+(defn emit-fn
+  [this]
+  (let [[to-pop to-push] (-> this meta ::signature compile-signature)]
+    (fn [stack]
+      (let [[args stack] (pop-n stack to-pop)
+            result       (apply this args)]
+        (cond
+          (zero? to-push) stack
+          (= to-push 1)   (conj stack result)
+          :else           (into stack result))))))
+
 (extend-protocol Word
   Object
   (emit [this] (emit-value this))
@@ -96,15 +107,7 @@
   (emit [this] (emit (lookup this)))
 
   Var
-  (emit [this]
-    (let [[to-pop to-push] (-> this meta ::signature compile-signature)]
-      (fn [stack]
-        (let [[args stack] (pop-n stack to-pop)
-              result       (apply @this args)]
-          (cond
-            (zero? to-push) stack
-            (= to-push 1)   (conj stack result)
-            :else           (into stack result))))))
+  (emit [this] (emit-fn this))
 
   Block
   (emit [{words :words}]
