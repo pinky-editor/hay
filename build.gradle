@@ -11,12 +11,12 @@ buildscript {
 }
 
 version = "0.1.0-SNAPSHOT"
-group   = "pinky"
+group   = "pinky-editor"
 
-description = "A stack-oriented language"
+description = "A stack-oriented, concatenative extension language"
 
 ext.kotka = [
-    repository:     "pinky/hay",
+    repository:     "pinky-editor/hay",
     wrapperVersion: "1.12"
 ]
 
