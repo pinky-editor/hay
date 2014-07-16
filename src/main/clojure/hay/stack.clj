@@ -1,6 +1,6 @@
 (ns hay.stack
   (:refer-clojure
-    :exclude [read-string]
+    :exclude [read-string eval]
     :as clj)
   (:import
     java.util.regex.Pattern
@@ -56,6 +56,10 @@
      :map      hash-map
      :block    #(->Block %&)}
     (parse reader)))
+
+(defn eval
+  [stack word]
+  (word stack))
 
 (defn ^:private lookup
   [word]
