@@ -73,15 +73,22 @@
 
 (defn emit-fn
   [this]
-  (let [[to-pop to-push] (-> this meta ::signature compile-signature)]
-    (fn [stack]
-      (let [[args stack] (pop-n stack to-pop)
-            result       (apply this args)]
-        (cond
-          (nil? to-push)  result
-          (zero? to-push) stack
-          (= to-push 1)   (conj stack result)
-          :else           (into stack result))))))
+  (let [sig (-> this meta ::signature)]
+    (cond
+      (vector? sig)
+      (let [[to-pop to-push] (compile-signature sig)]
+        (fn [stack]
+          (let [[args stack] (pop-n stack to-pop)
+                result       (apply this args)]
+            (cond
+              (nil? to-push)  result
+              (zero? to-push) stack
+              (= to-push 1)   (conj stack result)
+              :else           (into stack result)))))
+
+      (= sig :stack) this
+      :else          (throw (ex-info "Function has no valid signature"
+                                     {:invalid-signature sig})))))
 
 (extend-protocol Word
   Object
