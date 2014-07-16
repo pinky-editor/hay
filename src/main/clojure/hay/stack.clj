@@ -67,6 +67,7 @@
 
 (defn emit-value
   [v]
+  ^{::signature :stack}
   #(conj % v))
 
 (declare pop-n compile-signature lookup)
@@ -77,6 +78,7 @@
     (cond
       (vector? sig)
       (let [[to-pop to-push] (compile-signature sig)]
+        ^{::signature :stack}
         (fn [stack]
           (let [[args stack] (pop-n stack to-pop)
                 result       (apply this args)]
@@ -109,6 +111,7 @@
   Block
   (emit [{words :words}]
     (let [words (map emit words)]
+      ^{::signature ::stack}
       #(reduce eval % words)))
 
   QuotedSymbol
