@@ -1,12 +1,60 @@
 (ns hay.stack
+  (:refer-clojure
+    :exclude [read-string]
+    :as clj)
   (:import
+    java.util.regex.Pattern
     clojure.lang.Symbol
-    clojure.lang.Var))
+    clojure.lang.Var)
+  (:require
+    [clojure.java.io :as io]
+    [instaparse.core :as insta]))
 
 (def world
   (atom
     {::namespaces {}
      ::namespace  :haystack.core}))
+
+(defrecord QuotedSymbol [sym])
+(defrecord Block [words])
+
+(def ^:private parse
+  (insta/parser (io/resource "hay/grammar.ebnf")))
+
+(defn read-string
+  [reader]
+  (insta/transform
+    {:unit     list
+     :nil      (constantly nil)
+     :boolean  #(= % "true")
+     :string   #(-> (apply str %&)
+                  (.replaceAll "\\\\n" "\n")
+                  (.replaceAll "\\\\r" "\t")
+                  (.replaceAll "\\\\r" "\t")
+                  (.replaceAll "\\\\\"" "\"")
+                  (.replaceAll "\\\\\\\\" "\\\\"))
+     :regex    #(Pattern/compile %)
+     :symbol   (comp symbol str)
+     :qsymbol  (fn [nspace sym] (symbol (name nspace) (name sym)))
+     :quoted   ->QuotedSymbol
+     :keyword  (comp keyword str)
+     :qkeyword (fn [nspace & kw]
+                 (let [[nspace kw] (if (symbol? nspace)
+                                     [(name nspace) (apply str kw)]
+                                     [(name (get @world ::namespace))
+                                      (apply str nspace kw)])]
+                   (keyword nspace kw)))
+     :number   (fn ([number] number) ([sign number] (sign number)))
+     :integer  #(Long/parseLong (apply str %&))
+     :float    #(Double/parseDouble (apply str %&))
+     :rational /
+     :sign     {"+" + "-" -}
+     :vector   vector
+     :list     list
+     :set      #(set %&)
+     :map      hash-map
+     :block    #(->Block %&)}
+    (parse reader)))
 
 (defn ^:private lookup
   [word]
