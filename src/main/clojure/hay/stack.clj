@@ -1,10 +1,14 @@
 (ns hay.stack
   (:refer-clojure
-    :exclude [read-string eval]
+    :exclude [read-string eval resolve]
     :as clj)
   (:import
     java.util.regex.Pattern
     clojure.lang.AFunction
+    clojure.lang.APersistentMap
+    clojure.lang.APersistentSet
+    clojure.lang.APersistentVector
+    clojure.lang.PersistentList
     clojure.lang.Symbol
     clojure.lang.Var)
   (:require
@@ -65,6 +69,9 @@
 (defprotocol Word
   (emit [this]))
 
+(defprotocol Collection
+  (resolve [this]))
+
 (defn emit-value
   [v]
   ^{::signature :stack}
@@ -92,6 +99,10 @@
       :else          (throw (ex-info "Function has no valid signature"
                                      {:invalid-signature sig})))))
 
+(defn emit-collection
+  [this]
+  (emit-value (resolve this)))
+
 (extend-protocol Word
   Object
   (emit [this] (emit-value this))
@@ -105,6 +116,18 @@
   AFunction
   (emit [this] (emit-fn this))
 
+  APersistentMap
+  (emit [this] (emit-collection this))
+
+  APersistentSet
+  (emit [this] (emit-collection this))
+
+  APersistentVector
+  (emit [this] (emit-collection this))
+
+  PersistentList
+  (emit [this] (emit-collection this))
+
   Var
   (emit [this] (emit-fn this))
 
@@ -115,6 +138,32 @@
 
   QuotedSymbol
   (emit [{sym :sym}] (emit-value (lookup sym))))
+
+(extend-protocol Collection
+  APersistentMap
+  (resolve [this]
+    (reduce-kv (fn [this k v] (assoc this (resolve k) (resolve v))) {} this))
+
+  APersistentSet
+  (resolve [this] (into #{} (map resolve this)))
+
+  APersistentVector
+  (resolve [this] (mapv resolve this))
+
+  PersistentList
+  (resolve [this] (apply list (map resolve this)))
+
+  QuotedSymbol
+  (resolve [{sym :sym}] (lookup sym))
+
+  Block
+  (resolve [this] (emit this))
+
+  Object
+  (resolve [this] this)
+
+  nil
+  (resolve [this] this))
 
 (declare signature>args)
 
