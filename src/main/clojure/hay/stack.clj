@@ -81,12 +81,16 @@
 (defprotocol ^:private Word
   (^:private emit [this]))
 
+(defn emit-value
+  [v]
+  #(conj % v))
+
 (extend-protocol Word
   Object
-  (emit [this] #(conj % this))
+  (emit [this] (emit-value this))
 
   nil
-  (emit [this] #(conj % this))
+  (emit [this] (emit-value this))
 
   Symbol
   (emit [this] (emit (lookup this)))
@@ -109,6 +113,4 @@
         (reduce #(%2 %1) stack words))))
 
   QuotedSymbol
-  (emit [{sym :sym}]
-    (let [v (lookup sym)]
-      #(conj % v))))
+  (emit [{sym :sym}] (emit-value (lookup sym))))
