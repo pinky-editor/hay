@@ -121,3 +121,18 @@
 
   QuotedSymbol
   (emit [{sym :sym}] (emit-value (lookup sym))))
+
+(defn ^:private signature>args
+  [sig]
+  (into [] (take-while #(not= % '--) sig)))
+
+(defmacro word
+  [sig & body]
+  `(with-meta (fn ~(signature>args sig) ~@body) {::signature '~sig}))
+
+(defmacro defword
+  [name sig & body]
+  `(do
+     (def ~name (word ~sig ~@body))
+     (alter-meta! (var ~name) assoc ::signature '~sig)
+     (var ~name)))
