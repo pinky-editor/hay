@@ -78,10 +78,10 @@
                 [[] stack])
        n))
 
-(defprotocol ^:private Item
+(defprotocol ^:private Word
   (^:private emit [this]))
 
-(extend-protocol Item
+(extend-protocol Word
   Object
   (emit [this] #(conj % this))
 
