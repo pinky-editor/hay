@@ -100,4 +100,15 @@
           (cond
             (zero? to-push) stack
             (= to-push 1)   (conj stack result)
-            :else           (into stack result)))))))
+            :else           (into stack result))))))
+
+  Block
+  (emit [{words :words}]
+    (let [words (map emit words)]
+      (fn [stack]
+        (reduce #(%2 %1) stack words))))
+
+  QuotedSymbol
+  (emit [{sym :sym}]
+    (let [v (lookup sym)]
+      #(conj % v))))
