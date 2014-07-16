@@ -98,7 +98,7 @@
   (emit [this] (emit-value this))
 
   Symbol
-  (emit [this] (emit (lookup this)))
+  (emit [this] (lookup this))
 
   AFunction
   (emit [this] (emit-fn this))
