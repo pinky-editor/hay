@@ -68,27 +68,14 @@
       w
       (throw (ex-info "Unknown word" {:unkown-word word})))))
 
-(defn ^:private compile-signature
-  [sig]
-  (reduce (fn [[to-push _] x]
-            (if (= x '--)
-              (reduced [to-push (- (count sig) to-push 1)])
-              [(inc to-push) _]))
-          [0 0] sig))
-
-(defn ^:private pop-n
-  [stack n]
-  (nth (iterate (fn [[popped stack]]
-                     [(conj popped (peek stack)) (pop stack)])
-                [[] stack])
-       n))
-
 (defprotocol ^:private Word
   (^:private emit [this]))
 
 (defn emit-value
   [v]
   #(conj % v))
+
+(declare pop-n compile-signature)
 
 (defn emit-fn
   [this]
@@ -126,9 +113,7 @@
   QuotedSymbol
   (emit [{sym :sym}] (emit-value (lookup sym))))
 
-(defn ^:private signature>args
-  [sig]
-  (into [] (take-while #(not= % '--) sig)))
+(declare signature>args)
 
 (defmacro word
   [sig & body]
@@ -140,3 +125,19 @@
      (def ~name (word ~sig ~@body))
      (alter-meta! (var ~name) assoc ::signature '~sig)
      (var ~name)))
+
+(defn ^:private signature>args
+  [sig]
+  (into [] (take-while #(not= % '--) sig)))
+
+(defn ^:private compile-signature
+  [sig]
+  (let [to-pop (count (signature>args sig))]
+    [to-pop (- (count sig) to-pop 1)]))
+
+(defn ^:private pop-n
+  [stack n]
+  (nth (iterate (fn [[popped stack]]
+                     [(conj popped (peek stack)) (pop stack)])
+                [[] stack])
+       n))
