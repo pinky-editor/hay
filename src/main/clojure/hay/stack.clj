@@ -84,6 +84,7 @@
       (let [[args stack] (pop-n stack to-pop)
             result       (apply this args)]
         (cond
+          (nil? to-push)  result
           (zero? to-push) stack
           (= to-push 1)   (conj stack result)
           :else           (into stack result))))))
@@ -133,7 +134,7 @@
 (defn ^:private compile-signature
   [sig]
   (let [to-pop (count (signature>args sig))]
-    [to-pop (- (count sig) to-pop 1)]))
+    [to-pop (when-not (= (pop sig) '???) (- (count sig) to-pop 1))]))
 
 (defn ^:private pop-n
   [stack n]
