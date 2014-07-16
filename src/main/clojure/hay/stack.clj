@@ -156,7 +156,8 @@
 
 (defn ^:private lookup
   [word]
-  (if-let [w (get-in @world [:namespaces *namespace* word])]
+  (if-let [w (get-in @world [::namespaces *namespace*
+                             :words (keyword (name word))])]
     w
     (throw (ex-info "Unknown word" {:unkown-word word}))))
 
