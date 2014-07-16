@@ -130,6 +130,31 @@
      (alter-meta! (var ~name) assoc ::signature '~sig)
      (var ~name)))
 
+(def empty-namespace {:words {}})
+
+(defn create-namespace
+  [nspace]
+  (swap! world update-in [::namespaces nspace]
+         (fnil identity empty-namespace)))
+
+(defn map-words
+  [hay-nspace mappings]
+  (create-namespace hay-nspace)
+  (swap! world update-in [::namespaces hay-nspace]
+         (fn [nspace]
+           (reduce (fn [nspace [n v]]
+                     (assoc-in nspace [:words n] (emit v)))
+                   nspace
+                   mappings))))
+
+(defn map-namespace
+  ([clj-nspace] (map-namespace clj-nspace (keyword (name clj-nspace))))
+  ([clj-nspace hay-nspace]
+   (map-words hay-nspace (keep (fn [[n v]]
+                                 (when (contains? (meta v) ::signature)
+                                   [(keyword (name n)) v]))
+                               (ns-publics (the-ns clj-nspace))))))
+
 (defn ^:private lookup
   [word]
   (if-let [w (get-in @world [:namespaces *namespace* word])]
