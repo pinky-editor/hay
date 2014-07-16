@@ -11,10 +11,11 @@
     [clojure.java.io :as io]
     [instaparse.core :as insta]))
 
+(def ^:dynamic *namespace* :haystack.core)
+
 (def world
   (atom
-    {::namespaces {}
-     ::namespace  :haystack.core}))
+    {::namespaces {}}))
 
 (defrecord QuotedSymbol [sym])
 (defrecord Block [words])
@@ -61,13 +62,6 @@
   [stack word]
   (word stack))
 
-(defn ^:private lookup
-  [word]
-  (let [world @world]
-    (if-let [w (get-in world [:namespaces (::namespace world) word])]
-      w
-      (throw (ex-info "Unknown word" {:unkown-word word})))))
-
 (defprotocol ^:private Word
   (^:private emit [this]))
 
@@ -75,7 +69,7 @@
   [v]
   #(conj % v))
 
-(declare pop-n compile-signature)
+(declare pop-n compile-signature lookup)
 
 (defn emit-fn
   [this]
@@ -126,6 +120,12 @@
      (def ~name (word ~sig ~@body))
      (alter-meta! (var ~name) assoc ::signature '~sig)
      (var ~name)))
+
+(defn ^:private lookup
+  [word]
+  (if-let [w (get-in @world [:namespaces *namespace* word])]
+    w
+    (throw (ex-info "Unknown word" {:unkown-word word}))))
 
 (defn ^:private signature>args
   [sig]
