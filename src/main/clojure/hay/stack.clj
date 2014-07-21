@@ -22,7 +22,26 @@
     {::namespaces {}}))
 
 (defrecord QuotedSymbol [sym])
+
+(defmethod print-method QuotedSymbol
+  [s w]
+  (doto w
+    (.write "'")
+    (.write (name (:sym s)))))
+
 (defrecord Block [words])
+
+(defmethod print-method Block
+  [b w]
+  (let [n (count (:words b))]
+    (doto w
+      (.write "'[")
+      (.write "Hay block (")
+      (.write (cond
+                (zero? n) "zero words"
+                (= n 1)   "one word"
+                :else     (format "%d words" n)))
+      (.write ")]"))))
 
 (def ^:private parse
   (insta/parser (io/resource "hay/grammar.ebnf")))
