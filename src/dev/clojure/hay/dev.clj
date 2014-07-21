@@ -4,6 +4,8 @@
     redl.core
     redl.complete))
 
+(reset! redl.core/pretty-print false)
+
 (defn repl-handler
   []
   (repl/default-handler))
