@@ -66,7 +66,7 @@
      :qkeyword (fn [nspace & kw]
                  (let [[nspace kw] (if (symbol? nspace)
                                      [(name nspace) (apply str kw)]
-                                     [(name (get @world ::namespace))
+                                     [(name *namespace*)
                                       (apply str nspace kw)])]
                    (keyword nspace kw)))
      :number   (fn ([number] number) ([sign number] (sign number)))
