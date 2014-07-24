@@ -13,13 +13,16 @@
     clojure.lang.Var)
   (:require
     [clojure.java.io :as io]
-    [instaparse.core :as insta]))
+    [instaparse.core :as insta]
+    [net.cgrand.megaatom :as mega]))
 
 (def ^:dynamic *namespace* :haystack.core)
 
 (def world
-  (atom
-    {::namespaces {}}))
+  (atom {::runtime {:namespaces {}}}))
+
+(def runtime
+  (mega/subatom world [::runtime]))
 
 (defrecord QuotedSymbol [sym])
 
@@ -201,31 +204,34 @@
 
 (defn create-namespace
   [nspace]
-  (swap! world update-in [::namespaces nspace]
-         (fnil identity empty-namespace)))
+  (mega/swap-in! runtime [:namespaces]
+                 update-in [nspace]
+                 (fnil identity empty-namespace)))
 
 (defn map-words
   [hay-nspace mappings]
   (create-namespace hay-nspace)
-  (swap! world update-in [::namespaces hay-nspace]
-         (fn [nspace]
-           (reduce (fn [nspace [n v]]
-                     (assoc-in nspace [:words n] (emit v)))
-                   nspace
-                   mappings))))
+  (mega/swap-in! runtime [:namespaces]
+                 update-in [hay-nspace]
+                 (fn [nspace]
+                   (reduce (fn [nspace [n v]]
+                             (assoc-in nspace [:words n] (emit v)))
+                           nspace
+                           mappings))))
 
 (defn map-namespace
   ([clj-nspace] (map-namespace clj-nspace (keyword (name clj-nspace))))
   ([clj-nspace hay-nspace]
-   (map-words hay-nspace (keep (fn [[n v]]
-                                 (when (contains? (meta v) ::signature)
-                                   [(keyword (name n)) v]))
-                               (ns-publics (the-ns clj-nspace))))))
+   (map-words hay-nspace
+              (keep (fn [[n v]]
+                      (when (contains? (meta v) ::signature)
+                        [(keyword (name n)) v]))
+                    (ns-publics (the-ns clj-nspace))))))
 
 (defn ^:private lookup
   [word]
-  (if-let [w (get-in @world [::namespaces *namespace*
-                             :words (keyword (name word))])]
+  (if-let [w (get-in @runtime [:namespaces *namespace*
+                               :words (keyword (name word))])]
     w
     (throw (ex-info "Unknown word" {:unkown-word word}))))
 
