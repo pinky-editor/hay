@@ -187,6 +187,21 @@
   nil
   (resolve [this] this))
 
+(defn repl
+  []
+  (binding [*namespace* *namespace*]
+    (loop [stack []]
+      (print (str (name *namespace*) "=> "))
+      (flush)
+      (let [text  (read-line)
+            stack (->> (read-string text)
+                    (map emit)
+                    (reduce eval stack))]
+        (when-not (= (peek stack) :haystack/exit)
+          (println "---Stack---")
+          (doseq [v stack] (prn v))
+          (recur stack))))))
+
 (declare signature>args)
 
 (defmacro word
