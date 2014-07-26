@@ -1,6 +1,7 @@
-unit       = exprs
-<exprs>    = expr (<whitespace>+ expr)*
-<literals> = literal (<whitespace>+ literal)*
+<exprs>    = expr
+           | expr <whitespace>+ exprs
+<literals> = literal
+           | literal <whitespace>+ literals
 
 whitespace = #'[ \t\r\n,]'
 

@@ -52,8 +52,7 @@
 (defn read-string
   [reader]
   (insta/transform
-    {:unit     list
-     :nil      (constantly nil)
+    {:nil      (constantly nil)
      :boolean  #(= % "true")
      :string   #(-> (apply str %&)
                   (.replaceAll "\\\\n" "\n")
