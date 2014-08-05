@@ -24,6 +24,30 @@
 (def runtime
   (mega/subatom world [::runtime]))
 
+(defn >keyword
+  [named]
+  (keyword (name named)))
+
+(defn resolve-sym
+  [sym]
+  (let [runtime     @runtime
+        nspace      (when-let [nspace (namespace sym)] (>keyword nspace))
+        word        (>keyword sym)
+        aliases     (get-in runtime [:namespaces *namespace* :aliases])
+        lookup-path #(vector :namespaces % :words word)
+        candidates  (list
+                      nspace
+                      (when-not nspace *namespace*)
+                      (get aliases nspace))
+        nspace      (first
+                      (for [candidate candidates
+                            :when candidate
+                            :when (get-in runtime (lookup-path candidate))]
+                        candidate))]
+    (if nspace
+      (symbol (name nspace) (name word))
+      (throw (ex-info "Unknown word" {:unkown-word word})))))
+
 (defrecord QuotedSymbol [sym])
 
 (defmethod print-method QuotedSymbol
@@ -214,7 +238,9 @@
      (alter-meta! (var ~name) assoc ::signature '~sig)
      (var ~name)))
 
-(def empty-namespace {:words {}})
+(def empty-namespace
+  {:words   {}
+   :aliases {nil :haystack.core}})
 
 (defn create-namespace
   [nspace]
@@ -244,10 +270,10 @@
 
 (defn ^:private lookup
   [word]
-  (if-let [w (get-in @runtime [:namespaces *namespace*
-                               :words (keyword (name word))])]
-    w
-    (throw (ex-info "Unknown word" {:unkown-word word}))))
+  (let [word (resolve-sym word)]
+    (get-in @runtime
+            [:namespaces (>keyword (namespace word))
+             :words      (>keyword word)])))
 
 (defn ^:private signature>args
   [sig]
