@@ -16,7 +16,7 @@
     [instaparse.core :as insta]
     [net.cgrand.megaatom :as mega]))
 
-(def ^:dynamic *namespace* :haystack.core)
+(def ^:dynamic *namespace* "haystack.core")
 
 (def world
   (atom {::runtime {:namespaces {}}}))
@@ -24,15 +24,11 @@
 (def runtime
   (mega/subatom world [::runtime]))
 
-(defn >keyword
-  [named]
-  (keyword (name named)))
-
 (defn resolve-sym
   [sym]
   (let [runtime     @runtime
-        nspace      (when-let [nspace (namespace sym)] (>keyword nspace))
-        word        (>keyword sym)
+        nspace      (namespace sym)
+        word        (name sym)
         aliases     (get-in runtime [:namespaces *namespace* :aliases])
         lookup-path #(vector :namespaces % :words word)
         candidates  (list
@@ -45,8 +41,8 @@
                             :when (get-in runtime (lookup-path candidate))]
                         candidate))]
     (if nspace
-      (symbol (name nspace) (name word))
-      (throw (ex-info "Unknown word" {:unkown-word word})))))
+      (symbol nspace word)
+      (throw (ex-info "Unknown word" {:unkown-word sym})))))
 
 (defrecord QuotedSymbol [sym])
 
@@ -214,7 +210,7 @@
   []
   (binding [*namespace* *namespace*]
     (loop [stack []]
-      (print (str (name *namespace*) "=> "))
+      (print (str *namespace* "=> "))
       (flush)
       (let [text  (read-line)
             stack (->> (read-string text)
@@ -240,7 +236,7 @@
 
 (def empty-namespace
   {:words   {}
-   :aliases {nil :haystack.core}})
+   :aliases {nil "haystack.core"}})
 
 (defn create-namespace
   [nspace]
@@ -260,20 +256,18 @@
                            mappings))))
 
 (defn map-namespace
-  ([clj-nspace] (map-namespace clj-nspace (keyword (name clj-nspace))))
+  ([clj-nspace] (map-namespace clj-nspace (name clj-nspace)))
   ([clj-nspace hay-nspace]
    (map-words hay-nspace
               (keep (fn [[n v]]
                       (when (contains? (meta v) ::signature)
-                        [(keyword (name n)) v]))
+                        [(name n) v]))
                     (ns-publics (the-ns clj-nspace))))))
 
 (defn ^:private lookup
   [word]
   (let [word (resolve-sym word)]
-    (get-in @runtime
-            [:namespaces (>keyword (namespace word))
-             :words      (>keyword word)])))
+    (get-in @runtime [:namespaces (namespace word) :words (name word)])))
 
 (defn ^:private signature>args
   [sig]
