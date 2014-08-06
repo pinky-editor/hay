@@ -152,7 +152,9 @@
   (emit [this] (emit-value this))
 
   Symbol
-  (emit [this] (lookup this))
+  (emit [this]
+    ^{::signature :stack}
+    #(eval % (lookup this)))
 
   AFunction
   (emit [this] (emit-fn this))
@@ -178,7 +180,9 @@
       (emit-value ^{::signature :stack} #(reduce eval % words))))
 
   QuotedSymbol
-  (emit [{sym :sym}] (emit-value (lookup sym))))
+  (emit [{sym :sym}]
+    ^{::signature :stack}
+    #(conj % (lookup sym))))
 
 (extend-protocol Collection
   APersistentMap
