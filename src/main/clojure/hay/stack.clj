@@ -292,7 +292,17 @@
         (eval (pop stack) then-word)
         (eval (pop stack) else-word))))
 
-  (defhay :identity (word-fn '[a -- a] identity)))
+  (defhay :identity (word-fn '[a -- a] identity))
+
+  (defhay :even? (word-fn '[n -- bool] even?))
+  (defhay :odd?  (word-fn '[n -- bool] odd?))
+  (defhay :+     (word-fn '[n m -- num] +))
+  (defhay :add   (word-fn '[n m -- num] +))
+  (defhay :-     (word-fn '[n m -- num] -))
+  (defhay :sub   (word-fn '[n m -- num] -))
+  (defhay :*     (word-fn '[n m -- num] *))
+  (defhay :mult  (word-fn '[n m -- num] *))
+  (defhay :div   (word-fn '[n m -- num] /)))
 
 
 (defn map-words
