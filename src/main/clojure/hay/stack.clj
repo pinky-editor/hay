@@ -244,13 +244,6 @@
   (mega/swap-in! runtime [:namespaces nspace]
                  (fnil identity empty-namespace)))
 
-(defmacro defword
-  [name sig & body]
-  `(do
-     (def ~name (word ~sig ~@body))
-     (alter-meta! (var ~name) assoc ::signature '~sig)
-     (var ~name)))
-
 (defmacro with-hay-ns
   [nspace & body]
   `(binding [*namespace* ~(name nspace)]
@@ -303,26 +296,6 @@
   (defhay :*     (word-fn '[n m -- num] *))
   (defhay :mult  (word-fn '[n m -- num] *))
   (defhay :div   (word-fn '[n m -- num] /)))
-
-
-(defn map-words
-  [hay-nspace mappings]
-  (create-namespace! hay-nspace)
-  (mega/swap-in! runtime [:namespaces hay-nspace]
-                 (fn [nspace]
-                   (reduce (fn [nspace [n v]]
-                             (assoc-in nspace [:words n] (emit v)))
-                           nspace
-                           mappings))))
-
-(defn map-namespace
-  ([clj-nspace] (map-namespace clj-nspace (name clj-nspace)))
-  ([clj-nspace hay-nspace]
-   (map-words hay-nspace
-              (keep (fn [[n v]]
-                      (when (contains? (meta v) ::signature)
-                        [(name n) v]))
-                    (ns-publics (the-ns clj-nspace))))))
 
 (defn ^:private lookup
   [word]
