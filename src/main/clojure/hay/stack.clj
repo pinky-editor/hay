@@ -304,7 +304,13 @@
   (defhayfn :hash-map   :stack (coll #(apply hash-map %) stack))
   (defhayfn :sorted-map :stack (coll #(apply sorted-map %) stack))
   (defhayfn :hash-set   :stack (coll set stack))
-  (defhayfn :sorted-set :stack (coll #(apply sorted-set %) stack)))
+  (defhayfn :sorted-set :stack (coll #(apply sorted-set %) stack))
+
+  (defhay :conj   (word-fn '[coll x -- coll]   conj))
+  (defhay :disj   (word-fn '[coll x -- coll]   disj))
+  (defhay :assoc  (word-fn '[coll k v -- coll] assoc))
+  (defhay :dissoc (word-fn '[coll k -- coll]   dissoc))
+  (defhay :count  (word-fn '[coll -- n]        count)))
 
 (defn ^:private lookup
   [word]
