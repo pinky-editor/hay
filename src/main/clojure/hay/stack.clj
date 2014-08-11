@@ -9,8 +9,7 @@
     clojure.lang.APersistentSet
     clojure.lang.APersistentVector
     clojure.lang.PersistentList
-    clojure.lang.Symbol
-    clojure.lang.Var)
+    clojure.lang.Symbol)
   (:require
     [clojure.java.io :as io]
     [instaparse.core :as insta]
@@ -170,9 +169,6 @@
 
   PersistentList
   (emit [this] (emit-collection this))
-
-  Var
-  (emit [this] (emit-fn this))
 
   Block
   (emit [{words :words}]
