@@ -227,9 +227,13 @@
 
 (declare signature>args)
 
+(defn word-fn
+  [sig f]
+  (vary-meta f assoc ::signature sig))
+
 (defmacro word
   [sig & body]
-  `(with-meta (fn ~(signature>args sig) ~@body) {::signature '~sig}))
+  `(word-fn '~sig (fn ~(signature>args sig) ~@body)))
 
 (def empty-namespace
   {:words   {}
