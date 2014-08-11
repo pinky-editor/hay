@@ -256,6 +256,12 @@
   `(defhay ~w (vary-meta (fn ~(signature>args sig) ~@body)
                          assoc ::signature '~sig)))
 
+(defn ^:private coll
+  [ctor stack]
+  (let [n (peek stack)
+        [args stack] (pop-n (pop stack) n)]
+    (conj stack (ctor args))))
+
 (with-hay-ns :haystack.core
   (defhayfn :.
     [w block --]
@@ -291,7 +297,14 @@
   (defhay :sub   (word-fn '[n m -- num] -))
   (defhay :*     (word-fn '[n m -- num] *))
   (defhay :mult  (word-fn '[n m -- num] *))
-  (defhay :div   (word-fn '[n m -- num] /)))
+  (defhay :div   (word-fn '[n m -- num] /))
+
+  (defhayfn :vector     :stack (coll vec stack))
+  (defhayfn :list       :stack (coll #(apply list %) stack))
+  (defhayfn :hash-map   :stack (coll #(apply hash-map %) stack))
+  (defhayfn :sorted-map :stack (coll #(apply sorted-map %) stack))
+  (defhayfn :hash-set   :stack (coll set stack))
+  (defhayfn :sorted-set :stack (coll #(apply sorted-set %) stack)))
 
 (defn ^:private lookup
   [word]
