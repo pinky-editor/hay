@@ -310,7 +310,12 @@
   (defhay :disj   (word-fn '[coll x -- coll]   disj))
   (defhay :assoc  (word-fn '[coll k v -- coll] assoc))
   (defhay :dissoc (word-fn '[coll k -- coll]   dissoc))
-  (defhay :count  (word-fn '[coll -- n]        count)))
+  (defhay :count  (word-fn '[coll -- n]        count))
+
+  (defhayfn :dup    :stack (conj stack (peek stack)))
+  (defhayfn :forget :stack (pop stack))
+  (defhayfn :swap   :stack (let [[[x y] stack] (pop-n stack 2)]
+                             (-> stack (conj y) (conj x)))))
 
 (defn ^:private lookup
   [word]
