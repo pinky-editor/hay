@@ -289,7 +289,9 @@
 
 (defn ^:private signature>args
   [sig]
-  (into [] (take-while #(not= % '--) sig)))
+  (if (vector? sig)
+    (into [] (take-while #(not= % '--) sig))
+    '[stack]))
 
 (defn ^:private compile-signature
   [sig]
