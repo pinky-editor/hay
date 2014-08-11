@@ -231,6 +231,16 @@
   [sig & body]
   `(with-meta (fn ~(signature>args sig) ~@body) {::signature '~sig}))
 
+(def empty-namespace
+  {:words   {}
+   :aliases {nil "haystack.core"}})
+
+(defn create-namespace!
+  [nspace]
+  (mega/swap-in! runtime [:namespaces]
+                 update-in [nspace]
+                 (fnil identity empty-namespace)))
+
 (defmacro defword
   [name sig & body]
   `(do
@@ -238,19 +248,25 @@
      (alter-meta! (var ~name) assoc ::signature '~sig)
      (var ~name)))
 
-(def empty-namespace
-  {:words   {}
-   :aliases {nil "haystack.core"}})
+(defmacro with-hay-ns
+  [nspace & body]
+  `(binding [*namespace* ~(name nspace)]
+     (create-namespace! *namespace*)
+     ~@body))
 
-(defn create-namespace
-  [nspace]
-  (mega/swap-in! runtime [:namespaces]
-                 update-in [nspace]
-                 (fnil identity empty-namespace)))
+(defn defhay
+  [w word]
+  (mega/swap-in! runtime [:namespaces *namespace* :words]
+                 assoc (name w) (emit word)))
+
+(defmacro defhayfn
+  [w sig & body]
+  `(defhay ~w (vary-meta (fn ~(signature>args sig) ~@body)
+                         assoc ::signature '~sig)))
 
 (defn map-words
   [hay-nspace mappings]
-  (create-namespace hay-nspace)
+  (create-namespace! hay-nspace)
   (mega/swap-in! runtime [:namespaces]
                  update-in [hay-nspace]
                  (fn [nspace]
