@@ -237,8 +237,7 @@
 
 (defn create-namespace!
   [nspace]
-  (mega/swap-in! runtime [:namespaces]
-                 update-in [nspace]
+  (mega/swap-in! runtime [:namespaces nspace]
                  (fnil identity empty-namespace)))
 
 (defmacro defword
@@ -267,8 +266,7 @@
 (defn map-words
   [hay-nspace mappings]
   (create-namespace! hay-nspace)
-  (mega/swap-in! runtime [:namespaces]
-                 update-in [hay-nspace]
+  (mega/swap-in! runtime [:namespaces hay-nspace]
                  (fn [nspace]
                    (reduce (fn [nspace [n v]]
                              (assoc-in nspace [:words n] (emit v)))
