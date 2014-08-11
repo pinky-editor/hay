@@ -267,6 +267,34 @@
   `(defhay ~w (vary-meta (fn ~(signature>args sig) ~@body)
                          assoc ::signature '~sig)))
 
+(with-hay-ns :haystack.core
+  (defhayfn :.
+    [w block --]
+    (mega/swap-in! runtime [:namespaces *namespace* :words]
+                   assoc (name w) block))
+
+   (defhayfn :in-ns
+     [nspace --]
+     (let [nspace (name nspace)]
+       (create-namespace! nspace)
+       (set! *namespace* nspace)))
+
+  (defhayfn :apply
+    :stack
+    (let [[[f] stack] (pop-n stack 1)]
+      (eval stack f)))
+
+  (defhayfn :if
+    :stack
+    (let [[[test-word then-word else-word] stack] (pop-n stack 3)
+          stack (eval stack test-word)]
+      (if (peek stack)
+        (eval (pop stack) then-word)
+        (eval (pop stack) else-word))))
+
+  (defhay :identity (word-fn '[a -- a] identity)))
+
+
 (defn map-words
   [hay-nspace mappings]
   (create-namespace! hay-nspace)
