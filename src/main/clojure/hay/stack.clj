@@ -15,7 +15,42 @@
     [instaparse.core :as insta]
     [net.cgrand.megaatom :as mega]))
 
-(def ^:dynamic *namespace* "haystack.core")
+(defn ^:private lookup
+  [sym env]
+  (let [runtime     (::runtime env)
+        nspace      (namespace sym)
+        word        (name sym)
+        aliases     (get-in runtime [:namespaces (:namespace env) :aliases])
+        lookup-path #(vector :namespaces % :words word)
+        candidates  (list
+                      nspace
+                      (when-not nspace (:namespace env))
+                      (get aliases nspace))
+        resolved    (first
+                      (for [candidate candidates
+                            :when candidate]
+                        (when-let [resolved (get-in runtime
+                                                    (lookup-path candidate))]
+                          resolved)))]
+    (if resolved
+      resolved
+      (throw (ex-info "Unknown word" {:unkown-word sym})))))
+
+(defn ^:private signature>args
+  [sig]
+  (cond
+    (vector? sig)  (into [] (take-while #(not= % '--) sig))
+    (= sig :stack) '[stack]
+    (= sig :env)   '[{:keys [stack] :as env}]))
+
+(defn ^:private compile-signature
+  [sig]
+  (let [to-pop (count (signature>args sig))]
+    [to-pop (when-not (= (peek sig) '???) (- (count sig) to-pop 1))]))
+
+(defn ^:private pop-n
+  [stack n]
+  [(subvec stack (- (count stack) n)) (subvec stack 0 (- (count stack) n))])
 
 (def world
   (atom {::runtime {:namespaces {}}}))
@@ -23,32 +58,20 @@
 (def runtime
   (mega/subatom world [::runtime]))
 
-(defn resolve-sym
-  [sym]
-  (let [runtime     @runtime
-        nspace      (namespace sym)
-        word        (name sym)
-        aliases     (get-in runtime [:namespaces *namespace* :aliases])
-        lookup-path #(vector :namespaces % :words word)
-        candidates  (list
-                      nspace
-                      (when-not nspace *namespace*)
-                      (get aliases nspace))
-        nspace      (first
-                      (for [candidate candidates
-                            :when candidate
-                            :when (get-in runtime (lookup-path candidate))]
-                        candidate))]
-    (if nspace
-      (symbol nspace word)
-      (throw (ex-info "Unknown word" {:unkown-word sym})))))
-
 (defrecord QuotedSymbol [sym])
 
 (defmethod print-method QuotedSymbol
   [s w]
   (.write w "'")
   (print-method (:sym s) w))
+
+(defrecord QualifiedKeyword [kw])
+
+(defmethod print-method QualifiedKeyword
+  [s w]
+  (doto w
+    (.write "::")
+    (.write (name (:kw s)))))
 
 (defrecord Block [words])
 
@@ -84,11 +107,10 @@
      :quoted   ->QuotedSymbol
      :keyword  (comp keyword str)
      :qkeyword (fn [nspace & kw]
-                 (let [[nspace kw] (if (symbol? nspace)
-                                     [(name nspace) (apply str kw)]
-                                     [(name *namespace*)
-                                      (apply str nspace kw)])]
-                   (keyword nspace kw)))
+                 (->QualifiedKeyword
+                   (if (symbol? nspace)
+                     (keyword (name nspace) (apply str kw))
+                     (keyword (apply str nspace kw)))))
      :number   (fn ([number] number) ([sign number] (sign number)))
      :integer  #(Long/parseLong (apply str %&))
      :float    #(Double/parseDouble (apply str %&))
@@ -102,21 +124,26 @@
     (parse reader)))
 
 (defn eval
-  [stack word]
-  (word stack))
+  [env word]
+  (word env))
 
 (defprotocol Word
-  (emit [this]))
+  (-emit [this env]))
 
 (defprotocol Collection
-  (resolve [this]))
+  (resolve [this env]))
+
+(defn emit
+  [word env]
+  (let [word (-emit word env)]
+    (if (= (::signature (meta word)) :env)
+      word
+      (recur word env))))
 
 (defn emit-value
   [v]
-  ^{::signature :stack}
-  #(conj % v))
-
-(declare pop-n compile-signature lookup)
+  ^{::signature :env}
+  #(update-in % [:stack] conj v))
 
 (defn emit-fn
   [this]
@@ -134,93 +161,110 @@
               (= to-push 1)   (conj stack result)
               :else           (into stack result)))))
 
-      (= sig :stack) this
+      (= sig :stack)
+      ^{::signature :env}
+      #(update-in % [:stack] this)
+
+      (= sig :env)   this
       :else          (throw (ex-info "Function has no valid signature"
                                      {:invalid-signature sig})))))
 
 (defn emit-collection
-  [this]
-  (emit-value (resolve this)))
+  [this env]
+  (emit-value (resolve this env)))
 
 (extend-protocol Word
   Object
-  (emit [this] (emit-value this))
+  (-emit [this _env] (emit-value this))
 
   nil
-  (emit [this] (emit-value this))
+  (-emit [this _env] (emit-value this))
 
   Symbol
-  (emit [this]
-    ^{::signature :stack}
-    #(eval % (lookup this)))
+  (-emit [this _env]
+    ^{::signature :env}
+    #(eval % (lookup this %)))
 
   AFunction
-  (emit [this] (emit-fn this))
+  (-emit [this _env] (emit-fn this))
 
   APersistentMap
-  (emit [this] (emit-collection this))
+  (-emit [this env] (emit-collection this env))
 
   APersistentSet
-  (emit [this] (emit-collection this))
+  (-emit [this env] (emit-collection this env))
 
   APersistentVector
-  (emit [this] (emit-collection this))
+  (-emit [this env] (emit-collection this env))
 
   PersistentList
-  (emit [this] (emit-collection this))
+  (-emit [this env] (emit-collection this env))
 
   Block
-  (emit [{words :words}]
-    (let [words (map emit words)]
-      (emit-value ^{::signature :stack} #(reduce eval % words))))
+  (-emit [{words :words} env]
+    (let [words (map #(emit % env) words)]
+      (emit-value ^{::signature :env} #(reduce eval % words))))
 
   QuotedSymbol
-  (emit [{sym :sym}]
-    ^{::signature :stack}
-    #(conj % (lookup sym))))
+  (-emit [{sym :sym} _env]
+    ^{::signature :env}
+    #(update-in % [:stack] conj (lookup sym %)))
+
+  QualifiedKeyword
+  (-emit [this env] (emit-value (resolve this env))))
+
+(defn ^:private resolve-in
+  [env]
+  #(resolve % env))
 
 (extend-protocol Collection
   APersistentMap
-  (resolve [this]
-    (reduce-kv (fn [this k v] (assoc this (resolve k) (resolve v))) {} this))
+  (resolve [this env]
+    (reduce-kv (fn [this k v]
+                 (assoc this (resolve k env) (resolve v env)))
+               {} this))
 
   APersistentSet
-  (resolve [this] (into #{} (map resolve this)))
+  (resolve [this env] (into #{} (map (resolve-in env) this)))
 
   APersistentVector
-  (resolve [this] (mapv resolve this))
+  (resolve [this env] (mapv (resolve-in env) this))
 
   PersistentList
-  (resolve [this] (apply list (map resolve this)))
+  (resolve [this env] (apply list (map (resolve-in env) this)))
 
   QuotedSymbol
-  (resolve [{sym :sym}] (lookup sym))
+  (resolve [{sym :sym} env] (lookup sym env))
+
+  QualifiedKeyword
+  (resolve [{kw :kw} env]
+    (keyword (or (namespace kw) (:namespace env)) (name kw)))
 
   Block
-  (resolve [this] (emit this))
+  (resolve [this env] (emit this env))
 
   Object
-  (resolve [this] this)
+  (resolve [this _env] this)
 
   nil
-  (resolve [this] this))
+  (resolve [this _env] this))
 
 (defn repl
   []
-  (binding [*namespace* *namespace*]
-    (loop [stack []]
-      (print (str *namespace* "=> "))
-      (flush)
-      (let [text  (read-line)
-            stack (->> (read-string text)
-                    (map emit)
-                    (reduce eval stack))]
-        (when-not (= (peek stack) :haystack/exit)
-          (println "---Stack---")
-          (doseq [v stack] (prn v))
-          (recur stack))))))
-
-(declare signature>args)
+  (loop [stack  []
+         nspace "haystack.core"]
+    (print (str nspace "=> "))
+    (flush)
+    (let [words (read-string (read-line))
+          env   @world
+          prep  (assoc env :stack stack :namespace nspace)
+          {:keys [stack namespace] :as new-env}
+          (reduce (fn [e w] (eval e (emit w e))) prep words)]
+      (reset! world (dissoc new-env :stack :namespace))
+      (when-not (= (peek stack) :haystack/exit)
+        (println "---Stack---")
+        (doseq [v stack] (prn v))
+        (recur stack namespace)))))
 
 (defn word-fn
   [sig f]
@@ -234,26 +278,30 @@
   {:words   {}
    :aliases {nil "haystack.core"}})
 
-(defn create-namespace!
-  [nspace]
-  (mega/swap-in! runtime [:namespaces nspace]
-                 (fnil identity empty-namespace)))
+(defn create-namespace
+  [env nspace]
+  (update-in env [::runtime :namespaces (name nspace)]
+             (fnil identity empty-namespace)))
 
 (defmacro with-hay-ns
   [nspace & body]
-  `(binding [*namespace* ~(name nspace)]
-     (create-namespace! *namespace*)
-     ~@body))
+  `(swap! world (fn [env#]
+                  (let [nspace# (name ~nspace)]
+                    (-> env#
+                      (create-namespace nspace#)
+                      (assoc :namespace nspace#)
+                      ~@body
+                      (dissoc :namespace))))))
 
 (defn defhay
-  [w word]
-  (mega/swap-in! runtime [:namespaces *namespace* :words]
-                 assoc (name w) (emit word)))
+  [env w word]
+  (assoc-in env [::runtime :namespaces (:namespace env) :words (name w)]
+            (emit word env)))
 
 (defmacro defhayfn
-  [w sig & body]
-  `(defhay ~w (vary-meta (fn ~(signature>args sig) ~@body)
-                         assoc ::signature '~sig)))
+  [env w sig & body]
+  `(defhay ~env ~w (vary-meta (fn ~(signature>args sig) ~@body)
+                              assoc ::signature '~sig)))
 
 (defn ^:private coll
   [ctor stack]
@@ -263,28 +311,35 @@
 
 (with-hay-ns :haystack.core
   (defhayfn :.
-    [w block --]
-    (mega/swap-in! runtime [:namespaces *namespace* :words]
-                   assoc (name w) block))
+    :env
+    (let [[[w block] stack] (pop-n stack 2)]
+      (-> env
+        (assoc :stack stack)
+        (assoc-in [::runtime :namespaces (:namespace env) :words (name w)]
+                  block))))
 
-   (defhayfn :in-ns
-     [nspace --]
-     (let [nspace (name nspace)]
-       (create-namespace! nspace)
-       (set! *namespace* nspace)))
+  (defhayfn :in-ns
+    :env
+    (let [nspace (name (peek stack))]
+      (-> env
+        (create-namespace nspace)
+        (assoc :namespace nspace)
+        (assoc :stack (pop stack)))))
 
   (defhayfn :apply
-    :stack
+    :env
     (let [[[f] stack] (pop-n stack 1)]
-      (eval stack f)))
+      (-> env
+        (assoc :stack stack)
+        (eval f))))
 
   (defhayfn :if
-    :stack
+    :env
     (let [[[test-word then-word else-word] stack] (pop-n stack 3)
-          stack (eval stack test-word)]
+          {:keys [stack] :as env} (eval (assoc env :stack stack) test-word)]
       (if (peek stack)
-        (eval (pop stack) then-word)
-        (eval (pop stack) else-word))))
+        (eval (update-in env [:stack] pop) then-word)
+        (eval (update-in env [:stack] pop) else-word))))
 
   (defhay :identity (word-fn '[a -- a] identity))
 
@@ -316,22 +371,3 @@
   (defhayfn :swap   :stack (let [[[x y] stack] (pop-n stack 2)]
                              (-> stack (conj y) (conj x)))))
 
-(defn ^:private lookup
-  [word]
-  (let [word (resolve-sym word)]
-    (get-in @runtime [:namespaces (namespace word) :words (name word)])))
-
-(defn ^:private signature>args
-  [sig]
-  (if (vector? sig)
-    (into [] (take-while #(not= % '--) sig))
-    '[stack]))
-
-(defn ^:private compile-signature
-  [sig]
-  (let [to-pop (count (signature>args sig))]
-    [to-pop (when-not (= (peek sig) '???) (- (count sig) to-pop 1))]))
-
-(defn ^:private pop-n
-  [stack n]
-  [(subvec stack (- (count stack) n)) (subvec stack 0 (- (count stack) n))])
