@@ -47,9 +47,8 @@
 
 (defmethod print-method QuotedSymbol
   [s w]
-  (doto w
-    (.write "'")
-    (.write (name (:sym s)))))
+  (.write w "'")
+  (print-method (:sym s) w))
 
 (defrecord Block [words])
 
