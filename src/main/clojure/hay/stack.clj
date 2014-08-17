@@ -1,7 +1,6 @@
 (ns hay.stack
   (:refer-clojure
-    :exclude [read-string eval resolve]
-    :as clj)
+    :exclude [read-string eval resolve])
   (:import
     java.util.regex.Pattern
     clojure.lang.AFunction
@@ -11,9 +10,12 @@
     clojure.lang.PersistentList
     clojure.lang.Symbol)
   (:require
+    [hay.grammar :as g]
     [clojure.java.io :as io]
     [instaparse.core :as insta]
     [net.cgrand.megaatom :as mega]))
+
+(alias 'clj 'clojure.core)
 
 (defn ^:private lookup
   [sym env]
@@ -87,8 +89,7 @@
                 :else     (format "%d words" n)))
       (.write ")]"))))
 
-(def ^:private parse
-  (insta/parser (io/resource "hay/grammar.ebnf")))
+(def ^:private parse (insta/parser g/grammar :start :exprs))
 
 (defn read-string
   [reader]

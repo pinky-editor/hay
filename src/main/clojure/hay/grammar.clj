@@ -68,3 +68,53 @@
                           (insta/hide-tag (translate v)))
                    (assoc m k (translate v)))))
              {} grammar-map))
+
+(defmacro defgrammarfn
+  [fn-name args body]
+  `(def ~fn-name (fn ~args (translate ~body))))
+
+(defgrammarfn list-of
+  [elem-nt]
+  (let [list-nt (keyword (str (name elem-nt) "s"))]
+    #{nil elem-nt [elem-nt :-ws+ list-nt]}))
+
+(defgrammarfn coll-of
+  [left right elem-nt]
+  [(- left) :-ws* elem-nt :-ws* (- right)])
+
+(def grammar
+  (pimp-my-grammar
+    {:ws        #"[ \t\r\n,]"
+     :-exprs    (list-of :expr)
+     :-literals (list-of :literal)
+
+     :-expr     #{:symbol :qsymbol :literal}
+     :-literal  #{:nil :boolean :number :string :regex
+                  :quoted :keyword :qkeyword
+                  :vector :list :set :map :block}
+
+     :nil       (- "nil")
+     :boolean   #{"true" "false"}
+     :string    [(- "\"") #"([^\"\\]|\\.)*" (- "\"")]
+     :regex     ["#" :string]
+
+     :symbol    [:symhead :symrest*]
+     :qsymbol   [:symbol (- "/") :symbol]
+     :quoted    [(- "'") :symbol]
+     :keyword   [(- ":") :symrest+]
+     :qkeyword  #{[(- "::") :symrest+] [(- ":") :symbol (- "/") :symrest+]}
+
+     :-symhead  #{#"[a-zA-Z._+*!?<=>]" ["-" (!> #"[0-9]")]}
+     :-symrest  #"[a-zA-Z0-9._+*!?<=>#'-]"
+
+     :number    [:sign? #{:integer :float :rational}]
+     :integer   #{"0" [#"[1-9]" (* #"[0-9]")]}
+     :float     [#{"0" [#"[1-9]" (* #"[0-9]")]} "." (+ #"[0-9]")]
+     :rational  [:integer (- "/") :integer]
+     :sign      [#"[+-]" (>> #"[0-9]")]
+
+     :vector    (coll-of "["  "]" :literals)
+     :list      (coll-of "("  ")" :literals)
+     :set       (coll-of "#{" "}" :literals)
+     :map       (coll-of "{"  "}" :literals)
+     :block     (coll-of "'[" "]" :exprs)}))
