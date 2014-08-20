@@ -22,6 +22,12 @@
   nil
   (translate [this] insta/Epsilon)
 
+  String
+  (translate [this] (insta/string this))
+
+  Pattern
+  (translate [this] (insta/regexp this))
+
   APersistentSet
   (translate [this] (apply insta/alt (map translate this)))
 
@@ -44,13 +50,7 @@
         keyword
         insta/nt
         modify
-        hide)))
-
-  String
-  (translate [this] (insta/string this))
-
-  Pattern
-  (translate [this] (insta/regexp this)))
+        hide))))
 
 (defn pimp-my-grammar
   [grammar-map]
