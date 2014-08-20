@@ -68,17 +68,13 @@
 (def -  (comp insta/hide translate))
 (def >> (comp insta/look translate))
 (def !> (comp insta/neg  translate))
- 
-(defmacro defgrammarfn
-  [fn-name args body]
-  `(def ~fn-name (fn ~args (translate ~body))))
 
-(defgrammarfn list-of
+(defn list-of
   [elem-nt]
   (let [list-nt (keyword (str (name elem-nt) "s"))]
     #{nil elem-nt [elem-nt :-ws+ list-nt]}))
 
-(defgrammarfn coll-of
+(defn coll-of
   [left right elem-nt]
   [(- left) :-ws* elem-nt :-ws* (- right)])
 
