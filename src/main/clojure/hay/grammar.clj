@@ -15,13 +15,6 @@
 (defprotocol GrammarItem
   (translate [this]))
 
-(def ?  (comp insta/opt  translate))
-(def *  (comp insta/star translate))
-(def +  (comp insta/plus translate))
-(def -  (comp insta/hide translate))
-(def >> (comp insta/look translate))
-(def !> (comp insta/neg  translate))
-
 (extend-protocol GrammarItem
   Object
   (translate [this] this)
@@ -69,6 +62,13 @@
                    (assoc m k (translate v)))))
              {} grammar-map))
 
+(def ?  (comp insta/opt  translate))
+(def *  (comp insta/star translate))
+(def +  (comp insta/plus translate))
+(def -  (comp insta/hide translate))
+(def >> (comp insta/look translate))
+(def !> (comp insta/neg  translate))
+ 
 (defmacro defgrammarfn
   [fn-name args body]
   `(def ~fn-name (fn ~args (translate ~body))))
