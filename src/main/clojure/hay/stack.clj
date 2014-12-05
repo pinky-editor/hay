@@ -177,7 +177,7 @@
   Symbol
   (-emit [this env]
     ^{:hay/signature :env}
-    #(eval % (lookup this %)))
+    #(eval % (lookup this env)))
 
   AFunction
   (-emit [this _env] (emit-fn this))
@@ -202,7 +202,7 @@
   QuotedSymbol
   (-emit [{sym :sym} env]
     ^{:hay/signature :env}
-    #(update-in % [:stack] conj (lookup sym %)))
+    #(update-in % [:stack] conj (lookup sym env)))
 
   QualifiedKeyword
   (-emit [this env] (emit-value (resolve this env))))
