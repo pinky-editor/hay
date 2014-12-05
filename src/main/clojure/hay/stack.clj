@@ -363,6 +363,10 @@
   (defhayfn :hash-set   :stack (coll set stack))
   (defhayfn :sorted-set :stack (coll #(apply sorted-set %) stack))
 
+  (defhayfn :map
+    [f s -- s]
+    (map (hay-call f) s))
+
   (defhay :conj   (word-fn '[coll x -- coll]   conj))
   (defhay :disj   (word-fn '[coll x -- coll]   disj))
   (defhay :assoc  (word-fn '[coll k v -- coll] assoc))
