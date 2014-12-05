@@ -70,6 +70,7 @@
 
 (defrecord Block [words])
 
+#_
 (defmethod print-method Block
   [b w]
   (let [n (count (:words b))]
