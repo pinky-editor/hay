@@ -247,8 +247,8 @@
 (defn repl
   []
   (loop [stack  []
-         nspace "haystack.core"]
-    (print (str nspace "=> "))
+         nspace "user"]
+    (print (str nspace "⇒ "))
     (flush)
     (let [words (read-string (read-line))
           env   @world
@@ -256,9 +256,8 @@
           {:keys [stack namespace] :as new-env}
           (reduce (fn [e w] (eval e (emit w e))) prep words)]
       (reset! world (dissoc new-env :stack :namespace))
-      (when-not (= (peek stack) :haystack/exit)
-        (println "---Stack---")
-        (doseq [v stack] (prn v))
+      (when-not (= (peek stack) :hay/exit)
+        (doseq [v stack] (print " → ") (prn v))
         (recur stack namespace)))))
 
 (defn word-fn
