@@ -365,3 +365,5 @@
   (defhayfn :swap   :stack (let [[[x y] stack] (pop-n stack 2)]
                              (-> stack (conj y) (conj x)))))
 
+(swap! world create-namespace :user)
+(swap! world assoc :namespace "user")
