@@ -130,22 +130,22 @@
 (defn emit
   [word env]
   (let [word (-emit word env)]
-    (if (= (::signature (meta word)) :env)
+    (if (= (:hay/signature (meta word)) :env)
       word
       (recur word env))))
 
 (defn emit-value
   [v]
-  ^{::signature :env}
+  ^{:hay/signature :env}
   #(update-in % [:stack] conj v))
 
 (defn emit-fn
   [this]
-  (let [sig (-> this meta ::signature)]
+  (let [sig (-> this meta :hay/signature)]
     (cond
       (vector? sig)
       (let [[to-pop to-push] (compile-signature sig)]
-        ^{::signature :stack}
+        ^{:hay/signature :stack}
         (fn [stack]
           (let [[args stack] (pop-n stack to-pop)
                 result       (apply this args)]
@@ -156,7 +156,7 @@
               :else           (into stack result)))))
 
       (= sig :stack)
-      ^{::signature :env}
+      ^{:hay/signature :env}
       #(update-in % [:stack] this)
 
       (= sig :env)   this
@@ -175,8 +175,8 @@
   (-emit [this _env] (emit-value this))
 
   Symbol
-  (-emit [this _env]
-    ^{::signature :env}
+  (-emit [this env]
+    ^{:hay/signature :env}
     #(eval % (lookup this %)))
 
   AFunction
@@ -197,11 +197,11 @@
   Block
   (-emit [{words :words} env]
     (let [words (map #(emit % env) words)]
-      (emit-value ^{::signature :env} #(reduce eval % words))))
+      (emit-value ^{:hay/signature :env} #(reduce eval % words))))
 
   QuotedSymbol
-  (-emit [{sym :sym} _env]
-    ^{::signature :env}
+  (-emit [{sym :sym} env]
+    ^{:hay/signature :env}
     #(update-in % [:stack] conj (lookup sym %)))
 
   QualifiedKeyword
@@ -262,7 +262,7 @@
 
 (defn word-fn
   [sig f]
-  (vary-meta f assoc ::signature sig))
+  (vary-meta f assoc :hay/signature sig))
 
 (defmacro word
   [sig & body]
@@ -295,7 +295,7 @@
 (defmacro defhayfn
   [env w sig & body]
   `(defhay ~env ~w (vary-meta (fn ~(signature>args sig) ~@body)
-                              assoc ::signature '~sig)))
+                              assoc :hay/signature '~sig)))
 
 (defn ^:private coll
   [ctor stack]
