@@ -24,19 +24,12 @@
         word        (name sym)
         aliases     (get-in runtime [:namespaces (:namespace env) :aliases])
         lookup-path #(vector :namespaces % :words word)
-        candidates  (list
-                      nspace
-                      (when-not nspace (:namespace env))
-                      (get aliases nspace))
-        resolved    (first
-                      (for [candidate candidates
-                            :when candidate]
-                        (when-let [resolved (get-in runtime
-                                                    (lookup-path candidate))]
-                          resolved)))]
-    (if resolved
-      resolved
-      (throw (ex-info "Unknown word" {:unkown-word sym})))))
+        candidates  (list nspace
+                          (when-not nspace (:namespace env))
+                          (get aliases nspace)
+                          "haystack.core")
+        resolved    (some #(get-in runtime (lookup-path %)) candidates)]
+    (or resolved (throw (ex-info "Unknown word" {:unkown-word sym})))))
 
 (defn ^:private signature>args
   [sig]
