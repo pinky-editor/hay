@@ -303,6 +303,15 @@
         [args stack] (pop-n (pop stack) n)]
     (conj stack (ctor args))))
 
+(defn hay-call
+  [word]
+  (fn [& args]
+    (-> @world
+      (assoc :stack (vec args))
+      (eval word)
+      :stack
+      first)))
+
 (with-hay-ns :haystack.core
   (defhayfn :.
     :env
