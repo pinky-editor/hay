@@ -15,12 +15,12 @@
   [stack
    value
    word
-   frozen?
+   state
    instructions])
 
 (defn >hay-thread
   [instructions]
-  (->HayThread [] nil nil false instructions))
+  (->HayThread [] nil nil :running instructions))
 
 (defmulti evaluate
   (fn [_thread instruction] (nth instruction 0))
@@ -28,30 +28,25 @@
 
 (defn step
   [thread]
-  (let [[op & more-instructions] (:instructions thread)]
+  (if-let [[op & more-instructions] (seq (:instructions thread))]
     (-> thread
-      (evaluate op)
-      (assoc :instructions more-instructions))))
+      (assoc :instructions more-instructions)
+      (evaluate op))
+    (assoc thread :state :done)))
 
 (defn run
   [thread]
-  (cond
-    (:frozen? thread)            thread
-    (seq (:instructions thread)) (recur (step thread))
-    :else
-    (let [stack (:stack thread)]
-      (case (count stack)
-        0 nil
-        1 (peek stack)
-        stack))))
+  (if (= (:state thread) :running)
+    (recur (step thread))
+    thread))
 
 (defn freeze
   [thread]
-  (assoc thread :frozen? true))
+  (assoc thread :state :frozen))
 
 (defn thaw
   [thread]
-  (assoc thread :frozen? false))
+  (assoc thread :state :running))
 
 (defmethod evaluate
   :NO-OP
