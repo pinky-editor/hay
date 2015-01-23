@@ -1,6 +1,17 @@
+;-
+; Copyright 2014-2015 © Meikel Brandmeyer.
+; All rights reserved.
+;
+; Licensed under the EUPL V.1.1 (cf. file EUPL-1.1 distributed with the
+; source code.) Translations in other european languages available at
+; https://joinup.ec.europa.eu/software/page/eupl.
+;
+; Alternatively, you may choose to use the software under the MIT license
+; (cf. file MIT distributed with the source code).
+
 (ns hay.grammar
   (:refer-clojure
-    :exclude [+ - *])
+    :exclude [+ - * read-string])
   (:import
     java.util.regex.Pattern
     clojure.lang.APersistentSet
@@ -8,7 +19,8 @@
     clojure.lang.PersistentList
     clojure.lang.Keyword)
   (:require
-    [instaparse.combinators :as insta]))
+    [instaparse.combinators :as insta]
+    [instaparse.core :as insta-c]))
 
 (alias 'clj 'clojure.core)
 
@@ -114,3 +126,49 @@
      :set       (coll-of "#{" "}" :literals)
      :map       (coll-of "{"  "}" :literals)
      :block     (coll-of "'[" "]" :exprs)}))
+
+(defrecord QuotedSymbol [sym])
+
+(defmethod print-method QuotedSymbol
+  [s w]
+  (.write w "'")
+  (print-method (:sym s) w))
+
+(defrecord QualifiedKeyword [kw])
+
+(defrecord Block [words])
+
+(def ^:private parse (insta-c/parser grammar :start :exprs))
+
+(defn read-string
+  [reader]
+  (insta-c/transform
+    {:nil      (constantly nil)
+     :boolean  #(= % "true")
+     :string   #(-> (apply str %&)
+                  (.replaceAll "\\\\n" "\n")
+                  (.replaceAll "\\\\r" "\t")
+                  (.replaceAll "\\\\r" "\t")
+                  (.replaceAll "\\\\\"" "\"")
+                  (.replaceAll "\\\\\\\\" "\\\\"))
+     :regex    #(Pattern/compile %)
+     :symbol   (comp symbol str)
+     :qsymbol  (fn [nspace sym] (symbol (name nspace) (name sym)))
+     :quoted   ->QuotedSymbol
+     :keyword  (comp keyword str)
+     :qkeyword (fn [nspace & kw]
+                 (->QualifiedKeyword
+                   (if (symbol? nspace)
+                     (keyword (name nspace) (apply str kw))
+                     (keyword (apply str nspace kw)))))
+     :number   (fn ([number] number) ([sign number] (sign number)))
+     :integer  #(Long/parseLong (apply str %&))
+     :float    #(Double/parseDouble (apply str %&))
+     :rational /
+     :sign     {"+" + "-" -}
+     :vector   vector
+     :list     list
+     :set      #(set %&)
+     :map      hash-map
+     :block    #(->Block %&)}
+    (parse reader)))
