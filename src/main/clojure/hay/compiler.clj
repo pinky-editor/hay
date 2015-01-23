@@ -77,9 +77,10 @@
 
   Var
   (-compile [this]
-    (if (ifn? @this)
-      (compile-fn this)
-      [[:VALUE this] [:WORD #'clojure.core/deref] [:CALL] [:PUSH]]))
+    (if (fn? @this)
+      (let [sig (:hay/signature (meta this))]
+        (compile-fn (vary-meta @this assoc :hay/signature sig)))
+      [[:VALUE @this] [:PUSH]]))
 
   Block
   (-compile [this] (reduce into [] (map -compile (:words this))))
