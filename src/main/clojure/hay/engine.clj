@@ -11,9 +11,12 @@
 
 (ns hay.engine
   (:require
-    hay.compiler)
+    hay.compiler
+    hay.grammar)
   (:import
-    hay.compiler.Compilate))
+    clojure.lang.AFn
+    hay.compiler.Compilate
+    hay.grammar.Block))
 
 (defrecord HayThread
   [stack
@@ -103,19 +106,31 @@
   [thread [_ f]]
   (assoc thread :word f))
 
+(defprotocol ICall
+  (call [this thread]))
+
+(extend-protocol ICall
+  AFn
+  (call [this thread]
+    (letfn [(do-call [v]
+              (case (count v)
+                0 (this)
+                1 (this (nth v 0))
+                2 (this (nth v 0) (nth v 1))
+                3 (this (nth v 0) (nth v 1) (nth v 2))
+                4 (this (nth v 0) (nth v 1) (nth v 2) (nth v 3))
+                5 (this (nth v 0) (nth v 1) (nth v 2) (nth v 3) (nth v 4))
+                (apply this v)))]
+      (update-in thread [:value] do-call)))
+
+  Compilate
+  (call [this thread]
+    (-> this
+      :instructions
+      (concat (:instructions thread))
+      (->> (assoc thread :instructions)))))
+
 (defmethod evaluate
   :CALL
   [thread _]
-  (let [v  (:value thread)
-        nv (case (count v)
-             0 ((:word thread))
-             1 ((:word thread) (nth v 0))
-             2 ((:word thread) (nth v 0) (nth v 1))
-             3 ((:word thread) (nth v 0) (nth v 1) (nth v 2))
-             4 ((:word thread) (nth v 0) (nth v 1) (nth v 2) (nth v 3))
-             5 ((:word thread) (nth v 0) (nth v 1) (nth v 2) (nth v 3) (nth v 4))
-             (apply (:word thread) v))]
-    (assoc thread :value nv)))
-
-
-
+  (call (:word thread) thread))
