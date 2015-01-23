@@ -9,7 +9,11 @@
 ; Alternatively, you may choose to use the software under the MIT license
 ; (cf. file MIT distributed with the source code).
 
-(ns hay.engine)
+(ns hay.engine
+  (:require
+    hay.compiler)
+  (:import
+    hay.compiler.Compilate))
 
 (defrecord HayThread
   [stack
@@ -19,8 +23,8 @@
    instructions])
 
 (defn >hay-thread
-  [instructions]
-  (->HayThread [] nil nil :running instructions))
+  [compilate]
+  (->HayThread [] nil nil :running (:instructions compilate)))
 
 (defmulti evaluate
   (fn [_thread instruction] (nth instruction 0))
