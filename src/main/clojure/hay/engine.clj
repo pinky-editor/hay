@@ -53,13 +53,11 @@
   [thread]
   (assoc thread :frozen? false))
 
-(def NO-OP [:NO-OP])
 (defmethod evaluate
   :NO-OP
   [thread _]
   thread)
 
-(def FREEZE [:FREEZE])
 (defmethod evaluate
   :FREEZE
   [thread _]
@@ -73,7 +71,6 @@
     (reduce (fn [[stack values] _] [(pop stack) (conj values (peek stack))])
             [stack []] (range n))))
 
-(def POP [:POP])
 (defmethod evaluate
   :POP
   [thread [_ n]]
@@ -83,7 +80,6 @@
       (assoc :stack nstack)
       (assoc :value values))))
 
-(def PUSH [:PUSH])
 (defmethod evaluate
   :PUSH
   [thread _]
@@ -91,7 +87,6 @@
     (update-in [:stack] conj (:value thread))
     (assoc :value nil)))
 
-(def PUSH-ALL [:PUSH-ALL])
 (defmethod evaluate
   :PUSH-ALL
   [thread _]
@@ -105,11 +100,10 @@
   (assoc thread :value v))
 
 (defmethod evaluate
-  :LOOKUP
+  :WORD
   [thread [_ f]]
   (assoc thread :word f))
 
-(def CALL [:CALL])
 (defmethod evaluate
   :CALL
   [thread _]
