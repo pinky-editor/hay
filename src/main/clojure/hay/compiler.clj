@@ -14,7 +14,7 @@
   (:require
     hay.grammar)
   (:import
-    clojure.lang.AFn
+    clojure.lang.AFunction
     clojure.lang.Symbol
     clojure.lang.Var
     hay.grammar.Block))
@@ -72,7 +72,7 @@
   nil
   (-compile [this] [[:VALUE nil] PUSH])
 
-  AFn
+  AFunction
   (-compile [this] (compile-fn this))
 
   Var

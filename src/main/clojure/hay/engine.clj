@@ -14,7 +14,7 @@
     hay.compiler
     hay.grammar)
   (:import
-    clojure.lang.AFn
+    clojure.lang.AFunction
     hay.compiler.Compilate
     hay.grammar.Block))
 
@@ -110,7 +110,7 @@
   (call [this thread]))
 
 (extend-protocol ICall
-  AFn
+  AFunction
   (call [this thread]
     (letfn [(do-call [v]
               (case (count v)
