@@ -70,7 +70,7 @@
   [thread _]
   (freeze thread))
 
-(defn ^:private pop-n
+(defn pop-n
   [stack n]
   (case n
     0 [stack []]
