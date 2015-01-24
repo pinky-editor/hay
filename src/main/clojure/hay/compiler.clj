@@ -84,7 +84,9 @@
       [[:VALUE @this] [:PUSH]]))
 
   Block
-  (-compile [this] (reduce into [] (map -compile (:words this))))
+  (-compile [this]
+    [[:VALUE (->Compilate (reduce into [] (map -compile (:words this))))]
+     PUSH])
 
   QualifiedKeyword
   (-compile [this] [[:VALUE (:kw this)] PUSH])
