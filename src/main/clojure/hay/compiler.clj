@@ -17,7 +17,8 @@
     clojure.lang.AFunction
     clojure.lang.Symbol
     clojure.lang.Var
-    hay.grammar.Block))
+    hay.grammar.Block
+    hay.grammar.QualifiedKeyword))
 
 (def CALL     [:CALL])
 (def NO-OP    [:NO-OP])
@@ -84,6 +85,9 @@
 
   Block
   (-compile [this] (reduce into [] (map -compile (:words this))))
+
+  QualifiedKeyword
+  (-compile [this] [[:VALUE (:kw this)] PUSH])
 
   Symbol
   (-compile [this] [[:LOOKUP this]]))
