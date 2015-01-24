@@ -168,3 +168,11 @@
                                           (:instructions thread)))
       (throw
         (ex-info (str "unknown word: " name) {:sym sym})))))
+
+(defn hay-call
+  [block]
+  (fn [& args]
+    (let [t (>hay-thread block)
+          t (assoc t :stack (into [] (reverse args)))
+          t (run t)]
+      (peek (:stack t)))))
