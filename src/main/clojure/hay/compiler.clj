@@ -100,3 +100,12 @@
 (defn compile
   [word]
   (->Compilate (-compile word)))
+
+(defn expose-var
+  [v]
+  (letfn [(compile-var
+            []
+            (alter-meta! v assoc :hay/compilate (compile v)))]
+    (compile-var)
+    (add-watch v :hay/recompile (fn [_ _ _ _] (compile-var)))
+    v))
