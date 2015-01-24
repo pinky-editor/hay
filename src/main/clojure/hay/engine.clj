@@ -25,11 +25,14 @@
    value
    word
    state
-   instructions])
+   instructions
+   locals])
 
 (defn >hay-thread
   [compilate]
-  (->HayThread [] nil nil :running (:instructions compilate)))
+  (->HayThread [] nil nil :running
+               (:instructions compilate)
+               {"*ns*" "hay.stack"}))
 
 (defmulti evaluate
   (fn [_thread instruction] (nth instruction 0))
