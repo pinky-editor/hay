@@ -144,3 +144,27 @@
   :THREAD-CALL
   [thread [_ f]]
   (f thread))
+
+(defn ^:private >word
+  [x]
+  {:post [(instance? Compilate %)]}
+  (cond
+    (vector? x) (nth x 1)
+    (instance? Compilate x) x
+    :else (or (:hay/compilate (meta x)) (deref x))))
+
+(defmethod evaluate
+  :LOOKUP
+  [thread [_ sym]]
+  (let [nspace (namespace sym)
+        sspace (or nspace (get (:locals thread) "*ns*"))
+        name   (name sym)]
+    (if-let [w (or (when-not nspace (find (:locals thread) name))
+                   (get-in @runtime [:namespaces sspace :words name])
+                   (get (ns-publics (symbol sspace)) (symbol name))
+                   (get-in @runtime [:namespaces "hay.stack" :words name])
+                   (get (ns-publics 'clojure.core) (symbol name)))]
+      (assoc thread :instructions (concat [[:WORD (>word w)] hay.compiler/CALL]
+                                          (:instructions thread)))
+      (throw
+        (ex-info (str "unknown word: " name) {:sym sym})))))
