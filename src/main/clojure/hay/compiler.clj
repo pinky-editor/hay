@@ -44,6 +44,9 @@
   [f]
   (let [signature (:hay/signature (meta f))]
     (cond
+      (= signature :thread)
+      [[:THREAD-CALL f]]
+
       (vector? signature)
       (let [[to-pop to-push] (compile-signature signature)]
         [[:POP to-pop]

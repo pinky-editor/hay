@@ -134,3 +134,8 @@
   :CALL
   [thread _]
   (call (:word thread) thread))
+
+(defmethod evaluate
+  :THREAD-CALL
+  [thread [_ f]]
+  (f thread))
