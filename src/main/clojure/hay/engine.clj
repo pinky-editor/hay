@@ -18,6 +18,8 @@
     hay.compiler.Compilate
     hay.grammar.Block))
 
+(def runtime (atom {:namespaces {}}))
+
 (defrecord HayThread
   [stack
    value
